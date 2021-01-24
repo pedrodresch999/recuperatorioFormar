@@ -4,17 +4,17 @@ const { log } = require('debug');
 const op = db.Sequelize.Op;
 
 module.exports = {
-    detalle: function (req,res) {
+    detalle: function (req, res) {
         let id = req.params.id;
         db.Producto.findByPk(id, {
-           include: [{all: true, nested: true}]
+            include: [{ all: true, nested: true }]
         })
-        .then(function (unProducto) {
-            res.render('detalle',{ unProducto: unProducto, title: unProducto.nombre })
-        })
+            .then(function (unProducto) {
+                res.render('detalle', { unProducto: unProducto, title: unProducto.nombre })
+            })
     },
 
-    porCategoria: function (req,res) {
+    porCategoria: function (req, res) {
         let categoria = req.params.laCategoria;
         db.Producto.findAll({
             where: {
@@ -23,18 +23,39 @@ module.exports = {
             include: [{
                 association: 'categorias'
             }]
-        })  
-        .then(function (resultado) {
-            res.render('porCategoria', { resultado: resultado, title: resultado[0].categorias.nombre })
         })
+            .then(function (resultado) {
+                res.render('porCategoria', { resultado: resultado, title: resultado[0].categorias.nombre })
+            })
     },
 
-    buscar: function (req,res) {
-       
-      
+    buscar: function (req, res) {
+        let busqueda = req.query.busqueda;
+        db.Producto.findAll({
+            where: {
+                [op.or]: [{
+                    nombre: {
+                        [op.substring]: busqueda
+                    }
+                },
+                {
+                    marca: {
+                        [op.substring]: busqueda
+                    }
+                }
+                ]
+            }
+
+
+        })
+        .then(function(resultados){
+                	res.render("resultadoBusqueda", {resultados});
+                })
+
+
     },
 
-    agregarComentario: function (req,res) {
+    agregarComentario: function (req, res) {
         if (req.session.usuarioLogueado == undefined) {
             res.redirect("/");
         }
@@ -47,23 +68,33 @@ module.exports = {
             usuario_id: idUsuario,
             producto_id: idProducto
         })
-        .then(function () {
-            res.redirect('/productos/detalle/'+idProducto)
+            .then(function () {
+                res.redirect('/productos/detalle/' + idProducto)
+            })
+    },
+
+    agregarProducto: function (req, res) {
+        if (req.session.usuarioLogueado == undefined) {
+            res.redirect("/");
+        }
+        res.render('agregarProducto', { title: 'Agregar Producto' });
+    },
+
+    productoSubmit: function (req, res) {
+        if (req.session.usuarioLogueado == undefined) {
+            res.redirect("/");
+        }
+        db.Producto.create({
+            nombre: req.body.nombre,
+            marca: req.body.marca,
+            precio: req.body.precio,
+            img_url: req.body.imagen,
+            categoria_id: req.body.categoria,
+            usuario_id: req.session.usuarioLogueado.id
         })
-    },
-
-    agregarProducto: function (req, res){
-        if (req.session.usuarioLogueado == undefined) {
-            res.redirect("/");
-        }
-        res.render('agregarProducto', { title: 'Agregar Producto'});
-    },
-
-    productoSubmit: function (req,res) {
-        if (req.session.usuarioLogueado == undefined) {
-            res.redirect("/");
-        }
-       
+            .then(function () {
+                res.redirect('/productos/misProductos');
+            })
 
     },
 
@@ -74,27 +105,27 @@ module.exports = {
 
         db.Producto.findAll(
             {
-            where: {usuario_id: req.session.usuarioLogueado.id},
-            order: [['updatedAt', 'DESC']]
-        }
+                where: { usuario_id: req.session.usuarioLogueado.id },
+                order: [['updatedAt', 'DESC']]
+            }
         )
-        .then(function (productos) {
-            res.render('misProductos', {productos: productos, title: 'Mis productos'})
-        })
+            .then(function (productos) {
+                res.render('misProductos', { productos: productos, title: 'Mis productos' })
+            })
     },
 
-    editarProducto: function (req,res) {
+    editarProducto: function (req, res) {
         if (req.session.usuarioLogueado == undefined) {
             res.redirect("/");
         }
         let id = req.params.id;
         db.Producto.findByPk(id)
-        .then(function (producto) {
-            res.render('editarProducto', {producto: producto, title: 'Editar producto'})
-        })
+            .then(function (producto) {
+                res.render('editarProducto', { producto: producto, title: 'Editar producto' })
+            })
     },
 
-    editarConfirm: function (req,res) {
+    editarConfirm: function (req, res) {
         if (req.session.usuarioLogueado == undefined) {
             res.redirect("/");
         }
@@ -103,15 +134,15 @@ module.exports = {
         db.Producto.update(req.body,
             {
                 where: {
-                    id:id
+                    id: id
                 }
             })
-        .then(function (output) {
-            res.redirect('/productos/misProductos')
-        })
+            .then(function (output) {
+                res.redirect('/productos/misProductos')
+            })
     },
 
-    borrarProducto: function (req,res) {
+    borrarProducto: function (req, res) {
         if (req.session.usuarioLogueado == undefined) {
             res.redirect("/");
         }
@@ -122,7 +153,7 @@ module.exports = {
             })
     },
 
-    borrarConfirm: function (req,res) {
+    borrarConfirm: function (req, res) {
         if (req.session.usuarioLogueado == undefined) {
             res.redirect("/");
         }
@@ -132,8 +163,8 @@ module.exports = {
                 id: id
             }
         })
-        .then(function (otuput) {
-            res.redirect('/productos/misProductos')
-        })
+            .then(function (otuput) {
+                res.redirect('/productos/misProductos')
+            })
     }
 }
